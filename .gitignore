@@ -1,0 +1,9 @@
+*.bak
+*.dll
+*.pyd
+*.user
+.idea
+.history
+__pycache__
+Debug
+Release
