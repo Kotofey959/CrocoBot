@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 button_back_category: KeyboardButton = KeyboardButton('⬅️ Назад к выбору категории')
 button_back_iphone: KeyboardButton = KeyboardButton('⬅️ Назад к выбору модели')

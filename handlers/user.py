@@ -2,7 +2,6 @@ from aiogram import Dispatcher
 from aiogram.types import Message
 
 from keyboards.main import *
-
 from products.products import get_products
 
 
