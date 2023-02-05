@@ -1,6 +1,6 @@
 from aiogram import Dispatcher
 from aiogram.types import Message
-from keyboards.keyboards import start_keyboard
+from keyboards.main import start_keyboard
 
 
 async def send_answer(message: Message):
