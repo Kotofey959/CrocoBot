@@ -2,17 +2,14 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from sqlalchemy import URL
 
 from config import Config, load_config
-from handlers.other import register_other_handlers
-from handlers.user import register_user_handlers
+from handlers import user
+from db import create_async_engine, get_session_maker, proceed_schemas, BaseModel
+
 
 logger = logging.getLogger(__name__)
-
-
-def register_all_handlers(dp: Dispatcher) -> None:
-    register_user_handlers(dp)
-    register_other_handlers(dp)
 
 
 async def main():
@@ -26,14 +23,25 @@ async def main():
     config: Config = load_config()
 
     bot: Bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
-    dp: Dispatcher = Dispatcher(bot)
+    dp: Dispatcher = Dispatcher()
 
-    register_all_handlers(dp)
+    postgres_url = URL.create(
+        'postgresql+asyncpg',
+        username='postgres',
+        password='Lol4ik594770146',
+        host='localhost',
+        port=5432,
+        database='Croco_users'
 
-    try:
-        await dp.start_polling()
-    finally:
-        await bot.close()
+    )
+
+    async_engine = create_async_engine(postgres_url)
+    session_maker = get_session_maker(async_engine)
+    await proceed_schemas(async_engine, BaseModel.metadata)
+
+    dp.include_router(user.router)
+
+    await dp.start_polling(bot, session_maker=session_maker)
 
 if __name__ == '__main__':
     try:

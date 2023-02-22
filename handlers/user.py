@@ -1,75 +1,36 @@
-from aiogram import Dispatcher
 from aiogram.types import Message
-
-from keyboards.main import *
-from products.products import get_products
-
-
-# Начальное меню
-async def process_start_command(message: Message):
-    await message.answer(text='Выбери интересующую категорию', reply_markup=start_keyboard)
+from aiogram import Router
+from keyboards.categories import categories_list, category_kb, products_kb, main_kb
+from aiogram.filters import CommandStart, Text
+import requests
+from db.users import create_user, is_user_reg
+from sqlalchemy.orm import sessionmaker
 
 
-# Б/У устройства
-async def show_used(message: Message):
-    response = await get_products(None, "Used")
-    await message.answer(text=f'Вот что у нас есть из Б/У устройств\n{response}',
-                         reply_markup=main_or_contact_keyboard)
+router: Router = Router()
 
 
-# Новые в наличии или под заказ
-async def stock_order(message: Message):
-    await message.answer(text='Посмотри что есть в наличии. Если не найдешь то, что тебе нужно, под заказ срок доставки'
-                              ' 4 дня', reply_markup=choose_keyboard)
+@router.message(CommandStart())
+async def start_menu(message: Message, session_maker: sessionmaker):
+    if not await is_user_reg(user_id=message.from_user.id, session_maker=session_maker):
+        await create_user(user_id=message.from_user.id,
+                          username=message.from_user.username,
+                          session_maker=session_maker)
+    await message.answer(text='гыгык', reply_markup=main_kb())
 
 
-# Новые в наличии
-async def new_stock(message: Message):
-    response = await get_products(None, "New_stock")
-    await message.answer(text=f'Вот что есть в наличии из новых.\n'
-                              f'{response}',
-                         reply_markup=back_contact_keyboard)
+# Меню групп техники
+@router.message(Text(text=categories_list))
+async def groups_menu(message: Message):
+    headers = {
+        'Authorization': '11b1abf2e30a8a5286cd49a7918aaafccc305096',
+    }
+    response = requests.get("https://online.moysklad.ru/api/remap/1.2/entity/productfolder",
+                            headers=headers).json()
+    groups = [group for group in response['rows']]
+    if not any(map(lambda x: x['pathName'].endswith(message.text), groups)):
+        await message.answer(text='Вот что у нас есть', reply_markup=products_kb(message.text))
+    else:
+        await message.answer(text='Выбери интересующую категорию', reply_markup=category_kb(message.text))
 
 
-# Категории новых устройств под заказ
-async def new_order(message: Message):
-    await message.answer(text='Что именно интересует?', reply_markup=new_categories_keyboard)
-
-
-# Выбор модели iPhone
-async def choose_iphone_category(message: Message):
-    await message.answer(text='Выбирай', reply_markup=iphone_keyboard)
-
-
-# Цена на выбранные модели iPhone под заказ
-async def iphone_price(message: Message):
-    response = await get_products(message.text, "New_order")
-    await message.answer(text=f'Вот цены под заказ на выбранные модели\n{response}',
-                         reply_markup=iphone_contact_keyboard)
-
-
-# Цена на выбранную категорию под заказ
-async def other_new_price(message: Message):
-    response = await get_products(message.text.strip('📱📲💻⌚️🎧 '), "New_order")
-    await message.answer(text=f'Цены на товары из категории {message.text}'
-                              f'{response}',
-                         reply_markup=category_contact_keyboard)
-
-
-# Связь с менеджером
-async def contact(message: Message):
-    await message.answer(text='А тут ничего нет')
-
-
-def register_user_handlers(dp: Dispatcher):
-    dp.register_message_handler(process_start_command, commands='start', text='⬅️ Главное меню')
-    dp.register_message_handler(show_used, text='Б/У Устройства')
-    dp.register_message_handler(stock_order, text=['Новые устройства', '⬅️ Назад'])
-    dp.register_message_handler(new_stock, text='В наличии')
-    dp.register_message_handler(new_order, text=['Под заказ', '⬅️ Назад к выбору категории'])
-    dp.register_message_handler(choose_iphone_category, text=['📱 iPhone', '⬅️ Назад к выбору модели'])
-    dp.register_message_handler(iphone_price, text=['iPhone 11/Pro/Max', 'iPhone 12/Pro/Max',
-                                                    'iPhone 13/Pro/Max', 'iPhone 14/Pro/Max'])
-    dp.register_message_handler(other_new_price, text=['📲 iPad', '💻 MacBook', '⌚️ Watch',
-                                                       '🎧 AirPods', 'Прочие устройства'])
-    dp.register_message_handler(contact, text='Написать менеджеру')
