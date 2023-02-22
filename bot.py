@@ -5,8 +5,9 @@ from aiogram import Bot, Dispatcher
 from sqlalchemy import URL
 
 from config import Config, load_config
-from handlers import user
+from handlers import user, registration
 from db import create_async_engine, get_session_maker, proceed_schemas, BaseModel
+from aiogram.fsm.storage.memory import MemoryStorage
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ async def main():
     config: Config = load_config()
 
     bot: Bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
-    dp: Dispatcher = Dispatcher()
+    dp: Dispatcher = Dispatcher(storage=MemoryStorage())
 
     postgres_url = URL.create(
         'postgresql+asyncpg',
@@ -40,6 +41,7 @@ async def main():
     await proceed_schemas(async_engine, BaseModel.metadata)
 
     dp.include_router(user.router)
+    dp.include_router(registration.router)
 
     await dp.start_polling(bot, session_maker=session_maker)
 
