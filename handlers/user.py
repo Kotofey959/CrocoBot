@@ -1,6 +1,6 @@
 from aiogram.types import Message
 from aiogram import Router
-from keyboards.categories import categories_list, category_kb, products_kb, main_kb
+from keyboards.main import categories_list, category_kb, products_kb, main_kb
 from aiogram.filters import CommandStart, Text
 import requests
 from db.users import create_user, is_user_reg

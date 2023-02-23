@@ -5,7 +5,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
-
+from order.user_registration import register_user
 import re
 
 from db import User
@@ -49,6 +49,7 @@ async def phone_reg(message: Message, state: FSMContext, session_maker: sessionm
                 sql_res = await session.execute(select(User).filter_by(user_id=message.from_user.id))
                 user: User = sql_res.scalar()
                 user.phone_number = int(message.text)
+                user.crm_link = await register_user(user.name, user.phone_number)
                 await state.clear()
                 await message.answer(text='Регистрация прошла успешно')
     else:

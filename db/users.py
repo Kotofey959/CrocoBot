@@ -10,7 +10,7 @@ class User(BaseModel):
     username = Column(VARCHAR(32),unique=False, nullable=True)
     phone_number = Column(BigInteger, nullable=True)
     name = Column(Text, nullable=True)
-    crm_id = Column(VARCHAR(40), unique=True, nullable=True)
+    crm_link = Column(VARCHAR, unique=True, nullable=True)
 
     def __str__(self):
         return f'<User:{self.user_id}>'
