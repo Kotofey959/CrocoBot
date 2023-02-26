@@ -2,6 +2,7 @@ import json
 
 import requests
 
+from api.link import CRMLink
 from config import CRM_API_KEY
 from helper import parse_name_to_kwargs
 
@@ -13,7 +14,8 @@ async def get_product_data(product):
     }
 
     response = requests.get(
-        f"https://online.moysklad.ru/api/remap/1.2/entity/product/?filter=name={parsed_product.get('name')}",
+        f"{CRMLink().product}"
+        f"?filter=name={parsed_product.get('name')}",
         headers=headers).json()
     product = None
 

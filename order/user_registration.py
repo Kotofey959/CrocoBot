@@ -2,6 +2,7 @@ import json
 
 import requests
 
+from api.link import CRMLink
 from config import CRM_API_KEY
 
 
@@ -16,7 +17,7 @@ async def register_user(name: str, phone_number: str):
         "phone": str(phone_number),
     }
 
-    response = requests.post('https://online.moysklad.ru/api/remap/1.2/entity/counterparty',
+    response = requests.post(CRMLink().counterparty,
                                    headers=headers,
                                    data=json.dumps(data)).json()
 

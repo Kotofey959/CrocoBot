@@ -4,6 +4,7 @@ from aiogram.filters import CommandStart, Text
 from aiogram.types import Message
 from sqlalchemy.orm import sessionmaker
 
+from api.link import CRMLink
 from config import CRM_API_KEY
 from db.users import create_user, is_user_reg
 from keyboards.main import categories_list, category_kb, main_kb, products_kb
@@ -26,8 +27,7 @@ async def groups_menu(message: Message):
     headers = {
         'Authorization': CRM_API_KEY,
     }
-    response = requests.get("https://online.moysklad.ru/api/remap/1.2/entity/productfolder",
-                            headers=headers).json()
+    response = requests.get(CRMLink().productfolder_link, headers=headers).json()
     groups = [group for group in response['rows']]
     if not any(map(lambda x: x['pathName'].endswith(message.text), groups)):
         await message.answer(text='Вот что у нас есть', reply_markup=products_kb(message.text))
