@@ -1,11 +1,12 @@
-from aiogram.types import Message
-from aiogram import Router
-from keyboards.main import categories_list, category_kb, products_kb, main_kb
-from aiogram.filters import CommandStart, Text
 import requests
-from db.users import create_user, is_user_reg
+from aiogram import Router
+from aiogram.filters import CommandStart, Text
+from aiogram.types import Message
 from sqlalchemy.orm import sessionmaker
 
+from config import CRM_API_KEY
+from db.users import create_user, is_user_reg
+from keyboards.main import categories_list, category_kb, main_kb, products_kb
 
 router: Router = Router()
 
@@ -23,7 +24,7 @@ async def start_menu(message: Message, session_maker: sessionmaker):
 @router.message(Text(text=categories_list))
 async def groups_menu(message: Message):
     headers = {
-        'Authorization': '11b1abf2e30a8a5286cd49a7918aaafccc305096',
+        'Authorization': CRM_API_KEY,
     }
     response = requests.get("https://online.moysklad.ru/api/remap/1.2/entity/productfolder",
                             headers=headers).json()

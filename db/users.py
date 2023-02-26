@@ -1,14 +1,13 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import VARCHAR, Column, Integer, Text, select
 
 from .database import BaseModel
-from sqlalchemy import Column, Integer, VARCHAR, Text, select, BigInteger
 
 
 class User(BaseModel):
     __tablename__ = 'users'
     user_id = Column(Integer, unique=True, nullable=False, primary_key=True)
     username = Column(VARCHAR(32),unique=False, nullable=True)
-    phone_number = Column(BigInteger, nullable=True)
+    phone_number = Column(Text, nullable=True)
     name = Column(Text, nullable=True)
     crm_link = Column(VARCHAR, unique=True, nullable=True)
 
@@ -23,7 +22,7 @@ async def create_user(user_id, username, session_maker):
                 user_id=user_id,
                 username=username
             )
-            session: AsyncSession
+
             session.add(user)
 
 

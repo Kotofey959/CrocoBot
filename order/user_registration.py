@@ -1,21 +1,23 @@
-import requests
 import json
 
+import requests
 
-async def register_user(name, phone_number):
+from config import CRM_API_KEY
+
+
+async def register_user(name: str, phone_number: str):
     headers = {
-        'Authorization': '11b1abf2e30a8a5286cd49a7918aaafccc305096',
+        'Authorization': CRM_API_KEY,
         'Content-Type': 'application/json'
     }
 
-    data = {"name": f"{name}",
-            "phone": f"{phone_number}",
-            }
+    data = {
+        "name": str(name),
+        "phone": str(phone_number),
+    }
 
     response = requests.post('https://online.moysklad.ru/api/remap/1.2/entity/counterparty',
                                    headers=headers,
                                    data=json.dumps(data)).json()
 
-    user_link = response.get('meta').get('href')
-
-    return user_link
+    return response.get('meta').get('href')

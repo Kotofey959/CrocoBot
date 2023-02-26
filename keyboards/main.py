@@ -1,9 +1,11 @@
+import requests
 from aiogram import types
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-import requests
+
+from config import CRM_API_KEY
 
 headers = {
-        'Authorization': '11b1abf2e30a8a5286cd49a7918aaafccc305096',
+        'Authorization': CRM_API_KEY,
     }
 response = requests.get("https://online.moysklad.ru/api/remap/1.2/entity/productfolder",
                         headers=headers).json()
@@ -15,7 +17,7 @@ def category_kb(msg):
     response = requests.get("https://online.moysklad.ru/api/remap/1.2/entity/productfolder",
                             headers=headers).json()
     builder = ReplyKeyboardBuilder()
-    groups = [group for group in response['rows']]
+    groups = list(response['rows'])
     for group in groups:
         if group['pathName'].endswith(msg):
             builder.add(types.KeyboardButton(text=group['name']))
