@@ -8,14 +8,14 @@ from config import CRM_API_KEY
 headers = {
         'Authorization': CRM_API_KEY,
     }
-response = requests.get(CRMLink().productfolder_link,
+response = requests.get(CRMLink().productfolder,
                         headers=headers).json()
 
 categories_list = [category['name'] for category in response['rows']]
 
 
 def category_kb(msg):
-    response = requests.get(CRMLink().productfolder_link,
+    response = requests.get(CRMLink().productfolder,
                             headers=headers).json()
     builder = ReplyKeyboardBuilder()
     groups = list(response['rows'])
@@ -28,7 +28,7 @@ def category_kb(msg):
 
 def products_kb(msg):
     builder = ReplyKeyboardBuilder()
-    response = requests.get(f"{CRMLink().assorment_link}/?filter=pathname~{msg}", headers=headers).json()
+    response = requests.get(f"{CRMLink().assortment}/?filter=pathname~{msg}", headers=headers).json()
     for product in response['rows']:
         builder.add(types.KeyboardButton(text=f'{product["name"]}|{int(product["salePrices"][0]["value"]//100)} руб'))
     builder.adjust(1)

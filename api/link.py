@@ -6,7 +6,7 @@
 class CRMLink:
 
     def __init__(self):
-        self.base_link = "https://online.moysklad.ru/api/remap/"
+        self.link = "https://online.moysklad.ru/api/remap"
         self.api_version = "1.2"
         self.base_object = "entity"
 
@@ -15,7 +15,7 @@ class CRMLink:
     @property
     def base_link(self):
         if self._base_link is None:
-            self._base_link = [self.base_link, self.api_version, self.base_object].join("/")
+            self._base_link = "/".join([self.link, self.api_version, self.base_object])
 
         return self._base_link
 
@@ -24,7 +24,7 @@ class CRMLink:
         return f"{self.base_link}/productfolder"
 
     @property
-    def assorment(self):
+    def assortment(self):
         return f"{self.base_link}/assortment"
 
     @property

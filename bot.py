@@ -42,7 +42,6 @@ async def main():
 
     dp.include_router(user.router)
     dp.include_router(registration.router)
-
     await dp.start_polling(bot, session_maker=session_maker)
 
 if __name__ == '__main__':
