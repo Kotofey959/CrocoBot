@@ -1,37 +1,53 @@
 import requests
 from aiogram import Router
 from aiogram.filters import CommandStart, Text
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.orm import sessionmaker
 
-from api.link import CRMLink
-from config import CRM_API_KEY
+from api.query import get_groups_list, get_price, get_products_to_order
 from db.users import create_user, is_user_reg
-from keyboards.main import categories_list, category_kb, main_kb, products_kb
+from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb
 
 router: Router = Router()
 
 
+class OrderStates(StatesGroup):
+    waiting_for_group = State()
+    view_price = State()
+    waiting_order = State()
+    payment = State()
+
+
 @router.message(CommandStart())
-async def start_menu(message: Message, session_maker: sessionmaker):
+async def start_menu(message: Message, session_maker: sessionmaker, state: FSMContext):
     if not await is_user_reg(user_id=message.from_user.id, session_maker=session_maker):
         await create_user(user_id=message.from_user.id,
                           username=message.from_user.username,
                           session_maker=session_maker)
+    await state.set_state(OrderStates.waiting_for_group)
     await message.answer(text='гыгык', reply_markup=main_kb())
 
 
 # Меню групп техники
-@router.message(Text(text=categories_list))
-async def groups_menu(message: Message):
-    headers = {
-        'Authorization': CRM_API_KEY,
-    }
-    response = requests.get(CRMLink().productfolder_link, headers=headers).json()
-    groups = [group for group in response['rows']]
+@router.message(OrderStates.waiting_for_group)
+async def groups_menu(message: Message, state: FSMContext):
+    groups = get_groups_list()
     if not any(map(lambda x: x['pathName'].endswith(message.text), groups)):
-        await message.answer(text='Вот что у нас есть', reply_markup=products_kb(message.text))
+        await message.answer(text=f"Вот что у нас есть:\n\n"
+                                  f"{get_price(message.text)}\n\n"
+                                  f"Если хочешь заказать позицию, которой нет в наличии нажми на кнопку 'Сделать заказ'",
+                             reply_markup=pre_order_kb())
+        await state.set_state(OrderStates.view_price)
+        await state.update_data(products=get_products_to_order(message.text))
     else:
         await message.answer(text='Выбери интересующую категорию', reply_markup=category_kb(message.text))
 
+
+@router.message(OrderStates.view_price, Text(text='Оформить заказ'))
+async def order_menu(message: Message, state: FSMContext):
+    data = await state.get_data()
+    await message.answer(text="Выбери товар, который хочешь заказать", reply_markup=order_kb(data['products']))
+    await state.set_state(OrderStates.waiting_order)
 

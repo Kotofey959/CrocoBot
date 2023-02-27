@@ -1,4 +1,4 @@
-from sqlalchemy import VARCHAR, Column, Integer, Text, select
+from sqlalchemy import VARCHAR, Column, Integer, Text, select, BigInteger
 
 from .database import BaseModel
 
@@ -7,7 +7,7 @@ class User(BaseModel):
     __tablename__ = 'users'
     user_id = Column(Integer, unique=True, nullable=False, primary_key=True)
     username = Column(VARCHAR(32),unique=False, nullable=True)
-    phone_number = Column(Text, nullable=True)
+    phone_number = Column(BigInteger, nullable=True)
     name = Column(Text, nullable=True)
     crm_link = Column(VARCHAR, unique=True, nullable=True)
 
