@@ -26,7 +26,7 @@ async def get_product_data(product):
 
     product_data = {
         "quantity": 1,
-        "price": parsed_price.get("price"),
+        "price": parsed_product.get("price"),
         "discount": 0,
         "vat": 0,
         "assortment": {
