@@ -12,6 +12,10 @@ from config import PHONE_REG, USER_NAME_REG
 from db import User
 from order.user_registration import register_user
 
+from keyboards.main import share_phone, order_kb
+
+from .user import OrderStates
+
 router = Router()
 
 
@@ -20,7 +24,7 @@ class RegStates(StatesGroup):
     waiting_for_phone = State()
 
 
-@router.message(Text(text='Регистрация'))
+@router.message(OrderStates.view_price, Text(text='Регистрация'))
 async def start_reg(message: Message, state: FSMContext):
     await message.answer(text='Давай пройдем быструю регистрацию. Введи свою фамилию и имя')
     await state.set_state(RegStates.waiting_for_name)
@@ -37,20 +41,24 @@ async def name_reg(message: Message, state: FSMContext, session_maker: sessionma
             user: User = sql_res.scalar()
             user.name = message.text
             await state.set_state(RegStates.waiting_for_phone)
-            await message.answer(text='Теперь введи свой номер телефона')
+            await message.answer(text='Теперь введи свой номер телефона', reply_markup=share_phone())
 
 
 @router.message(RegStates.waiting_for_phone)
 async def phone_reg(message: Message, state: FSMContext, session_maker: sessionmaker):
-    if not re.match(PHONE_REG, message.text):
-        await message.answer(text='Введи номер телефона в формате 89991234567')
-        return
-
     async with session_maker() as session:
         async with session.begin():
             sql_res = await session.execute(select(User).filter_by(user_id=message.from_user.id))
             user: User = sql_res.scalar()
-            user.phone_number = int(message.text)
+            if message.contact:
+                user.phone_number = int(message.contact.phone_number)
+            else:
+                if not re.match(PHONE_REG, message.text):
+                    await message.answer(text='Введи номер телефона в формате 89991234567')
+                    return
+                user.phone_number = int(message.text)
             user.crm_link = await register_user(user.name, user.phone_number)
-            await state.clear()
-            await message.answer(text='Регистрация прошла успешно')
+            await state.set_state(OrderStates.waiting_order)
+            data = await state.get_data()
+            await message.answer(text='Регистрация прошла успешно. Теперь выбери товар который хочешь заказать.',
+                                 reply_markup=order_kb(data['products']))

@@ -4,11 +4,12 @@ from aiogram.filters import CommandStart, Text
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from api.query import get_groups_list, get_price, get_products_to_order
-from db.users import create_user, is_user_reg
-from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb
+from db.users import create_user, is_user_reg, User
+from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb
 
 router: Router = Router()
 
@@ -37,7 +38,7 @@ async def groups_menu(message: Message, state: FSMContext):
     if not any(map(lambda x: x['pathName'].endswith(message.text), groups)):
         await message.answer(text=f"Вот что у нас есть:\n\n"
                                   f"{get_price(message.text)}\n\n"
-                                  f"Если хочешь заказать позицию, которой нет в наличии нажми на кнопку 'Сделать заказ'",
+                                  f"Если хочешь заказать позицию, которой нет в наличии нажми на кнопку 'Оформить заказ'",
                              reply_markup=pre_order_kb())
         await state.set_state(OrderStates.view_price)
         await state.update_data(products=get_products_to_order(message.text))
@@ -46,8 +47,20 @@ async def groups_menu(message: Message, state: FSMContext):
 
 
 @router.message(OrderStates.view_price, Text(text='Оформить заказ'))
-async def order_menu(message: Message, state: FSMContext):
-    data = await state.get_data()
-    await message.answer(text="Выбери товар, который хочешь заказать", reply_markup=order_kb(data['products']))
-    await state.set_state(OrderStates.waiting_order)
+async def order_menu(message: Message, state: FSMContext, session_maker: sessionmaker):
+    async with session_maker() as session:
+        async with session.begin():
+            sql_res = await session.execute(select(User).filter_by(user_id=message.from_user.id))
+            user: User = sql_res.scalar()
+            db_user = user
+            if user.crm_link is not None:
+                data = await state.get_data()
+                await message.answer(text="Выбери товар, который хочешь заказать", reply_markup=order_kb(data['products']))
+                await state.set_state(OrderStates.waiting_order)
+            else:
+                await message.answer(text='Для оформления заказа необходимо зарегистрироваться.', reply_markup=reg_kb())
 
+
+@router.message(OrderStates.waiting_order)
+async def new_order(message: Message, state: FSMContext, session_maker: sessionmaker):
+    pass
