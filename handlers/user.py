@@ -1,15 +1,17 @@
 import requests
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.filters import CommandStart, Text
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, LabeledPrice, PreCheckoutQuery, ContentType, successful_payment
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from api.query import get_groups_list, get_price, get_products_to_order
 from db.users import create_user, is_user_reg, User
+from helper import parse_name_to_kwargs
 from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb
+from config import PAYMENTS_TOKEN
 
 router: Router = Router()
 
@@ -55,7 +57,8 @@ async def order_menu(message: Message, state: FSMContext, session_maker: session
             db_user = user
             if user.crm_link is not None:
                 data = await state.get_data()
-                await message.answer(text="Выбери товар, который хочешь заказать", reply_markup=order_kb(data['products']))
+                await message.answer(text="Выбери товар, который хочешь заказать",
+                                     reply_markup=order_kb(data['products']))
                 await state.set_state(OrderStates.waiting_order)
             else:
                 await message.answer(text='Для оформления заказа необходимо зарегистрироваться.', reply_markup=reg_kb())
@@ -63,4 +66,27 @@ async def order_menu(message: Message, state: FSMContext, session_maker: session
 
 @router.message(OrderStates.waiting_order)
 async def new_order(message: Message, state: FSMContext, session_maker: sessionmaker):
-    pass
+    product = parse_name_to_kwargs(message.text)
+    price = LabeledPrice(label=product.get('name'), amount=product.get('price') / 100)
+    await message.answer_invoice(
+        title=product.get('name'),
+        description='Описание',
+        provider_token=PAYMENTS_TOKEN,
+        currency='rub',
+        is_flexible=False,
+        prices=[price],
+        payload='шляпа'
+    )
+    await state.set_state(OrderStates.payment)
+
+
+@router.pre_checkout_query(OrderStates.payment)
+async def pre_checkout(pre_checkout_q: PreCheckoutQuery):
+    await pre_checkout_q.answer(ok=True, error_message='Что-то пошло не так, попробуй позже.')
+
+
+@router.message(F.successful_payment, OrderStates.payment)
+async def successful_payment(message: Message):
+    await message.answer(text=f"Платеж на сумму {message.successful_payment.total_amount // 100} "
+                              f"{message.successful_payment.currency} прошел успешно. Статус заказа можешь посмотреть"
+                              f"в профиле.")

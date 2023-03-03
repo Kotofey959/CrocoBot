@@ -2,7 +2,6 @@
 Всопомгательные методы.
 """
 
-__author__ = "Maksimov A.V."
 
 from typing import Dict, Optional
 
@@ -30,7 +29,7 @@ def parse_name_to_kwargs(raw_name: str) -> Dict:
 def _get_price_str(value: str) -> Optional[float]:
     price = None
     try:
-        price = float(value.rstrip(' руб')) * 100
+        price = int(value.rstrip(' руб')) * 100
     except Exception as ex:
         print(f"Ты лох: {ex}")
 
