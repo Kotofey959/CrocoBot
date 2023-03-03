@@ -1,13 +1,15 @@
 import json
 
 import requests
+from sqlalchemy import select
 
 from api.link import CRMLink
 from config import CRM_API_KEY
+from db import User
 from helper import parse_name_to_kwargs
 
 
-async def get_product_data(product):
+def get_product_data(product):
     parsed_product = parse_name_to_kwargs(product)
     headers = {
         'Authorization': CRM_API_KEY,
@@ -40,7 +42,12 @@ async def get_product_data(product):
     return product_data
 
 
-async def create_order(product, user_link):
+async def create_order(product, user_id, session_maker):
+    async with session_maker() as session:
+        async with session.begin():
+            sql_res = await session.execute(select(User).filter_by(user_id=user_id))
+            user: User = sql_res.scalar()
+            user_link = user.crm_link
     headers = {
         'Authorization': CRM_API_KEY,
         'Content-Type': 'application/json',

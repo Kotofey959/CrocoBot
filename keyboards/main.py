@@ -43,7 +43,8 @@ def pre_order_kb():
 def order_kb(msg):
     builder = ReplyKeyboardBuilder()
     for prod in msg:
-        builder.add(types.KeyboardButton(text=f'{prod.get("name")}|{int(prod.get("salePrices")[0].get("value")/100)} руб'))
+        builder.add(
+            types.KeyboardButton(text=f'{prod.get("name")}|{int(prod.get("salePrices")[0].get("value") / 100)} руб'))
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
 
@@ -57,4 +58,10 @@ def share_phone():
 def reg_kb():
     builder = ReplyKeyboardBuilder()
     builder.add(types.KeyboardButton(text='Регистрация'))
+    return builder.as_markup(resize_keyboard=True)
+
+
+def after_payment():
+    builder = ReplyKeyboardBuilder()
+    builder.add(types.KeyboardButton(text='Профиль'), types.KeyboardButton(text='Главное меню'))
     return builder.as_markup(resize_keyboard=True)

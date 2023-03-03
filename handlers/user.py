@@ -10,8 +10,9 @@ from sqlalchemy.orm import sessionmaker
 from api.query import get_groups_list, get_price, get_products_to_order
 from db.users import create_user, is_user_reg, User
 from helper import parse_name_to_kwargs
-from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb
+from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb, after_payment
 from config import PAYMENTS_TOKEN
+from order.create_order import create_order
 
 router: Router = Router()
 
@@ -58,16 +59,16 @@ async def order_menu(message: Message, state: FSMContext, session_maker: session
             if user.crm_link is not None:
                 data = await state.get_data()
                 await message.answer(text="Выбери товар, который хочешь заказать",
-                                     reply_markup=order_kb(data['products']))
+                                     reply_markup=order_kb(data.get('products')))
                 await state.set_state(OrderStates.waiting_order)
             else:
                 await message.answer(text='Для оформления заказа необходимо зарегистрироваться.', reply_markup=reg_kb())
 
 
 @router.message(OrderStates.waiting_order)
-async def new_order(message: Message, state: FSMContext, session_maker: sessionmaker):
+async def new_order(message: Message, state: FSMContext):
     product = parse_name_to_kwargs(message.text)
-    price = LabeledPrice(label=product.get('name'), amount=product.get('price') / 100)
+    price = LabeledPrice(label=product.get('name'), amount=product.get('price')/100) # Деление на 100 для тестового платежа
     await message.answer_invoice(
         title=product.get('name'),
         description='Описание',
@@ -78,6 +79,7 @@ async def new_order(message: Message, state: FSMContext, session_maker: sessionm
         payload='шляпа'
     )
     await state.set_state(OrderStates.payment)
+    await state.update_data(selected_product=message.text)
 
 
 @router.pre_checkout_query(OrderStates.payment)
@@ -86,7 +88,9 @@ async def pre_checkout(pre_checkout_q: PreCheckoutQuery):
 
 
 @router.message(F.successful_payment, OrderStates.payment)
-async def successful_payment(message: Message):
+async def successful_payment(message: Message, session_maker:sessionmaker, state: FSMContext):
+    data = await state.get_data()
+    await create_order(product=data.get('selected_product'), user_id=message.from_user.id, session_maker=session_maker)
     await message.answer(text=f"Платеж на сумму {message.successful_payment.total_amount // 100} "
                               f"{message.successful_payment.currency} прошел успешно. Статус заказа можешь посмотреть"
-                              f"в профиле.")
+                              f"в профиле.", reply_markup=after_payment())
