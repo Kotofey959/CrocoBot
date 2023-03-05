@@ -26,9 +26,11 @@ async def create_user(user_id, username, session_maker):
             session.add(user)
 
 
-async def is_user_reg(user_id, session_maker) -> bool:
+async def get_user(user_id, session_maker) -> User:
     async with session_maker() as session:
         async with session.begin():
             sql_res = await session.execute(select(User).where(User.user_id == user_id))
-            user: User = sql_res.one_or_none()
-            return bool(user)
+            user: User = sql_res.scalar()
+            return user
+
+

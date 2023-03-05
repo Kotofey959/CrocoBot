@@ -3,14 +3,15 @@ from aiogram import Router, F
 from aiogram.filters import CommandStart, Text
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, LabeledPrice, PreCheckoutQuery, ContentType, successful_payment
+from aiogram.types import Message, LabeledPrice, PreCheckoutQuery
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
-from api.query import get_groups_list, get_price, get_products_to_order
-from db.users import create_user, is_user_reg, User
+from api.query import get_groups_list, get_price, get_products_to_order, get_user_orders
+from db.users import create_user, get_user, User
 from helper import parse_name_to_kwargs
-from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb, after_payment
+from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb, after_payment, \
+    main_menu_kb
 from config import PAYMENTS_TOKEN
 from order.create_order import create_order
 
@@ -26,12 +27,28 @@ class OrderStates(StatesGroup):
 
 @router.message(CommandStart())
 async def start_menu(message: Message, session_maker: sessionmaker, state: FSMContext):
-    if not await is_user_reg(user_id=message.from_user.id, session_maker=session_maker):
+    if not await get_user(user_id=message.from_user.id, session_maker=session_maker):
         await create_user(user_id=message.from_user.id,
                           username=message.from_user.username,
                           session_maker=session_maker)
     await state.set_state(OrderStates.waiting_for_group)
     await message.answer(text='гыгык', reply_markup=main_kb())
+
+
+@router.message(Text(text='Главное меню'))
+async def main_menu(message: Message, state: FSMContext):
+    await state.set_state(OrderStates.waiting_for_group)
+    await message.answer(text='гыгык', reply_markup=main_kb())
+
+
+@router.message(Text(text='Профиль'))
+async def user_profile(message: Message, session_maker: sessionmaker):
+    user_orders = await get_user_orders(user_id=message.from_user.id, session_maker=session_maker)
+    if not user_orders:
+        await message.answer(text="У тебя еще нет активных заказов", reply_markup=main_menu_kb())
+    else:
+        text = '\n'.join(user_orders)
+        await message.answer(text=text, reply_markup=main_menu_kb())
 
 
 # Меню групп техники

@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from sqlalchemy import URL
 
 from config import Config, load_config
-from handlers import user, registration
+from handlers import user, registration, other
 from db import create_async_engine, get_session_maker, proceed_schemas, BaseModel
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -42,6 +42,7 @@ async def main():
 
     dp.include_router(user.router)
     dp.include_router(registration.router)
+    dp.include_router(other.router)
     await dp.start_polling(bot, session_maker=session_maker)
 
 if __name__ == '__main__':
