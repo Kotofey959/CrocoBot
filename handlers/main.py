@@ -1,5 +1,5 @@
 import requests
-from aiogram import Router, F
+from aiogram import Router, F, types
 from aiogram.filters import CommandStart, Text
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from api.query import get_groups_list, get_price, get_products_to_order, get_user_orders
+from api.titles_lists import product_groups, products_list
 from db.users import create_user, get_user, User
 from helper import parse_name_to_kwargs
-from keyboards.main import category_kb, main_kb, products_kb, pre_order_kb, order_kb, reg_kb, after_payment, \
-    main_menu_kb
+from keyboards.main import category_kb, main_kb, order_kb, custom_kb
 from config import PAYMENTS_TOKEN
 from order.create_order import create_order
 
@@ -23,6 +23,7 @@ class OrderStates(StatesGroup):
     view_price = State()
     waiting_order = State()
     payment = State()
+    registration = State()
 
 
 @router.message(CommandStart())
@@ -45,21 +46,21 @@ async def main_menu(message: Message, state: FSMContext):
 async def user_profile(message: Message, session_maker: sessionmaker):
     user_orders = await get_user_orders(user_id=message.from_user.id, session_maker=session_maker)
     if not user_orders:
-        await message.answer(text="У тебя еще нет активных заказов", reply_markup=main_menu_kb())
+        await message.answer(text="У тебя еще нет активных заказов", reply_markup=custom_kb("Главное меню"))
     else:
         text = '\n'.join(user_orders)
-        await message.answer(text=text, reply_markup=main_menu_kb())
+        await message.answer(text=text, reply_markup=custom_kb("Главное меню"))
 
 
 # Меню групп техники
-@router.message(OrderStates.waiting_for_group)
+@router.message(OrderStates.waiting_for_group, Text(text=product_groups))
 async def groups_menu(message: Message, state: FSMContext):
     groups = get_groups_list()
     if not any(map(lambda x: x['pathName'].endswith(message.text), groups)):
         await message.answer(text=f"Вот что у нас есть:\n\n"
                                   f"{get_price(message.text)}\n\n"
                                   f"Если хочешь заказать позицию, которой нет в наличии нажми на кнопку 'Оформить заказ'",
-                             reply_markup=pre_order_kb())
+                             reply_markup=custom_kb("Оформить заказ"))
         await state.set_state(OrderStates.view_price)
         await state.update_data(products=get_products_to_order(message.text))
     else:
@@ -79,10 +80,13 @@ async def order_menu(message: Message, state: FSMContext, session_maker: session
                                      reply_markup=order_kb(data.get('products')))
                 await state.set_state(OrderStates.waiting_order)
             else:
-                await message.answer(text='Для оформления заказа необходимо зарегистрироваться.', reply_markup=reg_kb())
+                await message.answer(text='Для оформления заказа необходимо зарегистрироваться.',
+                                     reply_markup=custom_kb("Регистрация")
+                                     )
+                await state.set_state(OrderStates.registration)
 
 
-@router.message(OrderStates.waiting_order)
+@router.message(OrderStates.waiting_order, Text(text=products_list))
 async def new_order(message: Message, state: FSMContext):
     product = parse_name_to_kwargs(message.text)
     price = LabeledPrice(label=product.get('name'), amount=product.get('price')/100) # Деление на 100 для тестового платежа
@@ -93,7 +97,7 @@ async def new_order(message: Message, state: FSMContext):
         currency='rub',
         is_flexible=False,
         prices=[price],
-        payload='шляпа'
+        payload='шляпа',
     )
     await state.set_state(OrderStates.payment)
     await state.update_data(selected_product=message.text)
@@ -110,4 +114,5 @@ async def successful_payment(message: Message, session_maker:sessionmaker, state
     await create_order(product=data.get('selected_product'), user_id=message.from_user.id, session_maker=session_maker)
     await message.answer(text=f"Платеж на сумму {message.successful_payment.total_amount // 100} "
                               f"{message.successful_payment.currency} прошел успешно. Статус заказа можешь посмотреть"
-                              f"в профиле.", reply_markup=after_payment())
+                              f"в профиле.", reply_markup=custom_kb("Главное меню", "Профиль"))
+    await state.clear()

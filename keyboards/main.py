@@ -1,9 +1,8 @@
-import requests
+from typing import Text
+
 from aiogram import types
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-from api.link import CRMLink
-from config import CRM_API_KEY
 
 from api.query import get_products_in_group, get_groups_list
 
@@ -34,19 +33,12 @@ def main_kb():
     return builder.as_markup(resize_keyboard=True)
 
 
-def pre_order_kb():
-    builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text='Оформить заказ'))
-    return builder.as_markup(resize_keyboard=True)
-
-
 def order_kb(msg):
     builder = ReplyKeyboardBuilder()
     for prod in msg:
         builder.add(
             types.KeyboardButton(text=f'{prod.get("name")}|{int(prod.get("salePrices")[0].get("value") / 100)} руб')
         )
-    builder.add(types.KeyboardButton(text='Назад к выбору модели'))
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
 
@@ -57,19 +49,9 @@ def share_phone():
     return builder.as_markup(resize_keyboard=True)
 
 
-def reg_kb():
+def custom_kb(*kwargs: Text):
     builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text='Регистрация'))
-    return builder.as_markup(resize_keyboard=True)
-
-
-def after_payment():
-    builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text='Профиль'), types.KeyboardButton(text='Главное меню'))
-    return builder.as_markup(resize_keyboard=True)
-
-
-def main_menu_kb():
-    builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text='Главное меню'))
+    for value in kwargs:
+        builder.add(types.KeyboardButton(text=value))
+    builder.adjust(2)
     return builder.as_markup(resize_keyboard=True)

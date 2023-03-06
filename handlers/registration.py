@@ -14,7 +14,7 @@ from order.user_registration import register_user
 
 from keyboards.main import share_phone, order_kb
 
-from .user import OrderStates
+from .main import OrderStates
 
 router = Router()
 
@@ -24,7 +24,7 @@ class RegStates(StatesGroup):
     waiting_for_phone = State()
 
 
-@router.message(OrderStates.view_price, Text(text='Регистрация'))
+@router.message(OrderStates.registration, Text(text='Регистрация'))
 async def start_reg(message: Message, state: FSMContext):
     await message.answer(text='Давай пройдем быструю регистрацию. Введи свою фамилию и имя')
     await state.set_state(RegStates.waiting_for_name)
@@ -34,6 +34,7 @@ async def start_reg(message: Message, state: FSMContext):
 async def name_reg(message: Message, state: FSMContext, session_maker: sessionmaker):
     if not re.match(USER_NAME_REG, message.text):
         await message.answer(text='Введи фамилию и имя в формате Иванов Иван')
+        return
 
     async with session_maker() as session:
         async with session.begin():

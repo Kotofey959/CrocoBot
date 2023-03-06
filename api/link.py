@@ -34,3 +34,11 @@ class CRMLink:
     @property
     def counterparty(self):
         return f'{self.base_link}/counterparty'
+
+    @property
+    def customerorder(self):
+        return f'{self.base_link}/customerorder'
+
+    @property
+    def organization(self):
+        return f'{self.base_link}/organization/0408863f-aaaf-11ed-0a80-0b5f0026616e'

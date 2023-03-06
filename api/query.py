@@ -4,15 +4,12 @@ from sqlalchemy import select
 
 from db import User
 from db.users import get_user
-from helper import parse_product_to_kwargs
+from helper import product_to_kwargs_by_link
+from .headers import get_headers
 from .link import CRMLink
 from config import CRM_API_KEY
 import requests
 import json
-
-get_headers = {
-    'Authorization': CRM_API_KEY,
-}
 
 
 # Получения списка названий групп товаров
@@ -48,7 +45,7 @@ def get_positions(link) -> List:
     products = []
     for pos in positions.get("rows"):
         product_link = pos.get("assortment").get("meta").get("href")
-        products.append(parse_product_to_kwargs(product_link))
+        products.append(product_to_kwargs_by_link(product_link))
     return products
 
 
@@ -58,7 +55,7 @@ async def get_user_orders(user_id, session_maker) -> List:
         async with session.begin():
             sql_res = await session.execute(select(User).filter_by(user_id=user_id))
             user: User = sql_res.scalar()
-            all_orders = requests.get("https://online.moysklad.ru/api/remap/1.2/entity/customerorder", headers=get_headers).json()
+            all_orders = requests.get(CRMLink().customerorder, headers=get_headers).json()
             counter = 0
             user_orders = []
             for order in all_orders.get("rows"):
@@ -67,7 +64,7 @@ async def get_user_orders(user_id, session_maker) -> List:
                     product = get_positions(order.get("positions").get("meta").get("href"))[0]
                     order_status = requests.get(order.get("state").get("meta").get("href"), headers=get_headers).json()
                     user_orders.append(f'{counter})\n'
-                               f'Товар: {product.get("name")}\n'
-                               f'Цена: {product.get("price")}руб\n'
-                               f'Статус заказа: {order_status.get("name")}')
+                                       f'Товар: {product.get("name")}\n'
+                                       f'Цена: {product.get("price")}руб\n'
+                                       f'Статус заказа: {order_status.get("name")}')
             return user_orders

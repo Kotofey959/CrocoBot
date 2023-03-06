@@ -3,6 +3,7 @@ import json
 import requests
 from sqlalchemy import select
 
+from api.headers import post_headers
 from api.link import CRMLink
 from config import CRM_API_KEY
 from db import User
@@ -48,15 +49,12 @@ async def create_order(product, user_id, session_maker):
             sql_res = await session.execute(select(User).filter_by(user_id=user_id))
             user: User = sql_res.scalar()
             user_link = user.crm_link
-    headers = {
-        'Authorization': CRM_API_KEY,
-        'Content-Type': 'application/json',
-    }
+
     product_data = get_product_data(product)
     data = {
         "organization": {
             "meta": {
-                "href": "https://online.moysklad.ru/api/remap/1.2/entity/organization/0408863f-aaaf-11ed-0a80-0b5f0026616e",
+                "href": CRMLink().organization,
                 "type": "organization",
                 "mediaType": "application/json"
             }
@@ -71,6 +69,6 @@ async def create_order(product, user_id, session_maker):
         "positions": [product_data]
     }
 
-    requests.post('https://online.moysklad.ru/api/remap/1.2/entity/customerorder',
-                  headers=headers,
+    requests.post(CRMLink().customerorder,
+                  headers=post_headers,
                   data=json.dumps(data))
